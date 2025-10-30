@@ -1,5 +1,5 @@
 ```https://xomnia.com/post/navigating-the-european-cloud-landscape-open-telekom-cloud-stackit-and-ovhcloud-in-focus/?utm_content=405874903&utm_medium=social&utm_source=linkedin&hss_channel=lcp-2919540
-
+```
 # It is Time for a Dutch Public Cloud Service
 ## Introduction 
 Cloud Infrastructure has become the foundational layer of modern society. Not only do public services, government institutions, banks and public transport rely on cloud platforms, but generative AI is increasingly integrated into daily business workflows. Most of this runs on commercial American platforms. These hyperscalers are widely used, high-performing and offer production-ready services for almost any imaginable use case. They serve global markets first — and answer to shareholders, not public interests. There is no (local) accountability, public oversight or alignment or even agreement with Dutch or European public interests.
