@@ -155,48 +155,112 @@ ONE_PERCENT_BATTERY_J = PHONE_BATTERY_JOULES / 100
 # A complex search is approx 0.3 Wh = 1080 Joules.
 GOOGLE_SEARCH_J = 1080        
 
-def calculate_energy_impact(model_id: str, p_tok: int, c_tok: int) -> dict:
-    """
-    Calculates estimated energy consumption with 98% Confidence Intervals.
-    
-    Sources:
-    1. Luccioni, A., et al. (2023). "Power Hungry Processing: Watts Driving the Cost of AI Deployment?"
-       - Found generation (output) is significantly more energy intensive than prompt processing (input).
-    2. Patterson, D., et al. (2021). "Carbon Emissions and Large Neural Network Training".
-    3. SemiAnalysis (2024). Hardware specs for H100 vs A100 efficiency.
-    
-    Heuristics:
-    - Input tokens: Very cheap (Matrix-Vector multiplication is optimized).
-    - Output tokens: Expensive (Memory bandwidth bound, auto-regressive).
-    - GPT-4 class models: Assumed higher energy/token due to parameter count, 
-      even with Mixture of Experts (MoE) efficiency gains.
-    """
-    
-    # Define Coefficients: (Lower_Bound_J_per_Tok, Upper_Bound_J_per_Tok)
-    if any(x in model_id.lower() for x in ["gpt-4", "gemini-1.5", "large"]):
-        # Large/Dense Models
-        # Upper bound assumes older hardware or low utilization (high PUE)
-        k_input = (0.004, 0.04)  
-        k_output = (0.02, 0.20)  
-    else:
-        # Turbo/Small/Flash Models
-        k_input = (0.001, 0.01)
-        k_output = (0.005, 0.05)
+# Energy Constants (Joules per Token) -> (Lower_Bound, Upper_Bound)
+# High: Based on H100/A100 clusters, inefficient cooling, or dense params (GPT-4 class)
+COEFF_HIGH_IN = (0.004, 0.04)   # 4mJ - 40mJ
+COEFF_HIGH_OUT = (0.02, 0.20)   # 20mJ - 200mJ
 
-    # Calculate Bounds
-    j_lower = (p_tok * k_input[0]) + (c_tok * k_output[0])
-    j_upper = (p_tok * k_input[1]) + (c_tok * k_output[1])
+# Low: Based on optimized/small models, quantization, or efficient hardware (TPU/LPU)
+COEFF_LOW_IN = (0.001, 0.01)    # 1mJ - 10mJ
+COEFF_LOW_OUT = (0.005, 0.05)   # 5mJ - 50mJ
+
+# Dictionary mapping substrings to profiles
+# If a model name contains these keys, it gets the specific profile
+MODEL_PROFILES = {
+    "gpt-4": "high",
+    "opus": "high",
+    "sonnet": "high", 
+    "large": "high",
+    "ultra": "high",
+    "70b": "high",       # Unquantized 70B is heavy
+    "gemini": "high",    # broadly assuming high for Pro/Ultra
+    "mistral": "low",    # Base mistral 7b/8x7b is quite efficient
+    "turbo": "low",
+    "flash": "low",
+    "haiku": "low",
+}
+
+def get_model_coefficients(model_id: str) -> tuple:
+    """
+    Determines the energy coefficients (k_in, k_out) based on model ID.
+    Returns tuples for (input_range, output_range).
+    """
+    mid = model_id.lower()
     
-    # Point Estimate (Arithmetic Mean for display simplicity)
-    j_est = (j_lower + j_upper) / 2
+    # 1. Quantization Override
+    # If it's explicitly 4-bit/quantized, it is efficient by definition.
+    if any(q in mid for q in ["4bit", "q4", "awq", "gptq", "gguf"]):
+        return COEFF_LOW_IN, COEFF_LOW_OUT
+
+    # 2. Dictionary Lookup
+    profile = "high" # Default safety assumption (Assume worst case)
+    
+    # Check specific overrides in dictionary
+    for key, val in MODEL_PROFILES.items():
+        if key in mid:
+            profile = val
+            break # Stop at first match
+            
+    # 3. Return Constants
+    if profile == "low":
+        return COEFF_LOW_IN, COEFF_LOW_OUT
+    else:
+        return COEFF_HIGH_IN, COEFF_HIGH_OUT
+
+def estimate_time_based_energy(model_id: str, duration: float) -> float:
+    """
+    Alternative estimation: Energy = Power (Watts) * Time (Seconds).
+    Only reliable for local/quantized models where we know the hardware profile.
+    
+    Assumes a single RTX 3090/4090 class GPU running at ~300W load.
+    """
+    mid = model_id.lower()
+    is_local_quant = any(q in mid for q in ["4bit", "q4", "awq", "gguf"])
+    
+    if is_local_quant:
+        # 300 Watts is a reasonable average for a consumer GPU (3090/4090) 
+        # running heavy inference (memory bound).
+        # We assume 0 latency overhead because it's local.
+        return 300.0 * duration
+    
+    return 0.0 # Return 0 if we can't reliably estimate power (Cloud)
+
+def calculate_energy_impact(model_id: str, p_tok: int, c_tok: int, duration: float = 0.0) -> dict:
+    # 1. Get Token-Based Coefficients
+    k_in, k_out = get_model_coefficients(model_id)
+
+    # 2. Calculate Token-Based Energy (Range)
+    j_token_lower = (p_tok * k_in[0]) + (c_tok * k_out[0])
+    j_token_upper = (p_tok * k_in[1]) + (c_tok * k_out[1])
+    j_token_avg = (j_token_lower + j_token_upper) / 2
+
+    # 3. Calculate Time-Based Energy (Sanity Check for Local)
+    j_time = estimate_time_based_energy(model_id, duration)
+
+    # 4. Final Estimation Logic
+    # If we have a valid time-based estimate (local 4bit), we weigh it in.
+    # Otherwise, rely purely on token math.
+    if j_time > 0:
+        # We trust Time-based physics (Watts * Seconds) slightly more for local 
+        # because token-counts don't capture memory bandwidth stalls perfectly.
+        # Let's average the Token-Upper-Bound and the Time-Based.
+        final_joules = (j_token_avg + j_time) / 2
+        method_note = "Hybrid (Token + Time)"
+    else:
+        final_joules = j_token_avg
+        method_note = "Token Model"
+
+    # 5. Contextual Conversions
+    phone_pct = (final_joules / 54000.0) * 100
+    google_equiv = final_joules / 1080.0
 
     return {
-        "range_str": f"{j_lower:.1f} - {j_upper:.1f} J",
-        "est_joules": round(j_est, 2),
-        "phone_pct": j_est / ONE_PERCENT_BATTERY_J, # e.g. 1.5 = 1.5% of battery
-        "google_equiv": round(j_est / GOOGLE_SEARCH_J, 2)
+        "range_str": f"{j_token_lower:.1f}-{j_token_upper:.1f}J",
+        "est_joules": round(final_joules, 2),
+        "phone_pct": round(phone_pct, 4),
+        "google_equiv": round(google_equiv, 3),
+        "method": method_note
     }
-
 # ==============================================================================
 # SECTION 3: STORAGE LAYER
 # ==============================================================================
@@ -272,7 +336,14 @@ async def query_model(alias: str, model_name: str, full_prompt: str):
         
         # Calculate Energy
         usage = resp.usage
-        impact = calculate_energy_impact(model_name, usage.prompt_tokens, usage.completion_tokens)
+        duration = (datetime.now() - start).total_seconds()
+        # Move this call AFTER calculating duration
+        impact = calculate_energy_impact(
+           model_name, 
+           usage.prompt_tokens, 
+           usage.completion_tokens, 
+           duration  # <--- Now passing time!
+        )
         
     except Exception as e:
         text = f"API Error: {str(e)}"
@@ -281,7 +352,7 @@ async def query_model(alias: str, model_name: str, full_prompt: str):
     return {
         "model": alias, 
         "text": text, 
-        "duration": (datetime.now() - start).total_seconds(),
+        "duration": duration,
         "impact": impact
     }
 
