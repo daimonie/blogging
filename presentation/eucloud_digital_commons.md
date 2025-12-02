@@ -22,7 +22,7 @@ The United States allegedly pressured Microsoft to restrict access for the Inter
 
 If control over the cloud has become a question of power, then we should treat it like other critical infrastructure: as a public good.
 
-# The Alternative: Commercial vs Public Infrastructure
+## The Alternative: Commercial vs Public Infrastructure
 
 Cloud infrastructure has reached the threshold where it requires democratic safeguards that commercial platforms cannot provide. Nearly every citizen interacts with cloud infrastructure, often unconsciously — mobile apps, online banking, healthcare portals, and government websites all run on cloud platforms. But today's cloud is fully operated by commercial actors with global reach and zero obligation to citizens. We wouldn't accept this from our road network or national archives. We shouldn't accept it for the digital infrastructure that underpins them all.
 
@@ -30,10 +30,11 @@ This concern is especially pressing with the rise of Generative AI. The Dutch Mi
 
 The commercial cloud market works, but not in the interest of citizens, public agencies, or long-term resilience. We have no control over commercial conditions, and regulation alone cannot ensure autonomy. Public infrastructure also enables innovation: startups and SMEs often can't afford enterprise-grade cloud services. It could offer a discount in return for shares, thereby both fostering innovation and its own funding — similar to the Dutch academic patent model — reinvesting public-private success into shared digital infrastructure. 
 
+We do not need to reinvent the wheel. The industry standards for cloud computing — Kubernetes, Postgres, Apache Airflow — are already open source. The challenge is not invention, but operation. We need a European infrastructure that provides these standard tools as a reliable utility, stripping away the proprietary lock-in of American hyperscalers.
+
 Sovereignty, fairness, and innovation aren't competing ideals — they are interdependent. Each guards a different dimension of resilience. Together, they form the rationale for treating the cloud as a public utility.
 
-# Economic Cost: The EU is Set to Be a User, Not a Producer  
-## Lack of Infrastructure  
+## Economic Cost: The EU is Set to Be a User, Not a Producer  
 
 The EU consumes AI technology at scale, but produces little of the infrastructure that enables it. This infrastructure gap creates a structural dependency; Europe has strong AI adoption and research, but lags in developing foundational infrastructure.  We pay for the infrastructure, funding further infrastructure development abroad, increasing our dependence.
 
@@ -72,6 +73,8 @@ Sovereign infrastructure underpins not just security, but trust. Citizens must k
 Critics might argue that a public cloud would lag behind hyperscalers in innovation and cost efficiency. That's true — at first. But public value isn't measured quarterly, and sovereignty compounds. By embracing open source software, innovation is kept at a level similar to what hyperscalers already do — embrace open source initiatives, integrate them into a cohesive whole, and market it as an innovation.
 
 Sovereignty requires openness. Paradoxically, the most independent infrastructure will be built from global collaboration and open-source software — the very antithesis of national isolation. A sovereign cloud isn't about isolation — it's about accountability. Just as our dikes protect the land, an open, public cloud protects our data. This sovereignty requires more than openness—it requires technical autonomy.
+
+Critics often worry about government surveillance. But unlike commercial 'black boxes,' a public cloud based on open source is a 'glass house.' The code, security protocols, and encryption standards are public. Trust isn't requested; it is verified. Citizens and watchdogs can audit the system to ensure the state provides the infrastructure, but the citizen retains the keys.
 
 Legal safeguards can't enforce technical autonomy, because the data is still hosted on US servers. This autonomy is further undermined by the regulatory risks outlined earlier—the CLOUD Act and its geopolitical implications, as demonstrated by the International Criminal Court case. Regulation is reactive and slow; infrastructure should be proactive and strategic. You can't regulate your way into owning the electricity grid, you must build it.
 
